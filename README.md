@@ -1,30 +1,24 @@
-# YouTube Video Transcript Processor using Google Gemini Flash API
+# YouTube Transcript Processor with Google Gemini Flash API
 
-This project provides a Python-based command-line tool that extracts the transcript from a YouTube video and allows users to interactively process the content using Google's Gemini 2.0 Flash API. The tool supports summarization, custom prompt-based processing, and default key-point generation with explanations.
+This Python script provides a simple and interactive way to extract and process YouTube video transcripts using the Google Gemini 2.0 Flash API. Users can choose to generate summaries, ask custom questions, or receive structured key points with examples—ideal for learning, content research, or knowledge extraction.
 
 ## Features
 
-- Extracts transcript text from any YouTube video (if available)
-- Accepts custom input from the user to specify what to do with the transcript
-- Uses Google Gemini 2.0 Flash API to:
-  - Summarize the video content
-  - Generate key bullet points with explanations and real-life examples
-  - Respond to user-defined prompts
-- Saves the processed output to a `.txt` file using the video ID as the filename
+- Extracts transcripts from YouTube videos (if captions are publicly available)
+- Prompts user to choose how they want to process the transcript
+- Integrates with Google Gemini Flash API for high-quality content generation
+- Automatically generates a descriptive title if YouTube metadata is unavailable
+- Saves processed results in a text file named after the video title
 
 ## Requirements
 
-- Python 3.7 or higher
-- Google Gemini API key
-- Required Python libraries:
-  - `requests`
-  - `python-dotenv`
-  - `youtube-transcript-api`
+- Python 3.7+
+- [Google Gemini API Key](https://aistudio.google.com/app/apikey)
+- YouTube videos must have available transcripts
 
-## Installation
+## Dependencies
 
-1. Clone the repository:
+Install required Python packages:
 
-   ```bash
-   git clone https://github.com/your-username/youtube-gemini-transcript.git
-   cd youtube-gemini-transcript
+```bash
+pip install -r requirements.txt

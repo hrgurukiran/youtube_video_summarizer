@@ -1,8 +1,10 @@
 import requests
 import json
 import os
+import re
 from youtube_transcript_api import YouTubeTranscriptApi
 from dotenv import load_dotenv
+from urllib.parse import urlparse, parse_qs
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,6 +19,17 @@ def get_youtube_transcript(video_id):
         print(f"Error fetching transcript: {e}")
         return None
 
+# Function to get video title using YouTube oEmbed API (no auth needed)
+def get_youtube_title(video_url):
+    try:
+        oembed_url = f"https://www.youtube.com/oembed?url={video_url}&format=json"
+        response = requests.get(oembed_url)
+        if response.status_code == 200:
+            return response.json().get("title", None)
+    except Exception as e:
+        print(f"Error fetching title: {e}")
+    return None
+
 # Function to process text with Gemini API based on custom prompt
 def process_with_gemini(text, api_key, user_prompt=None):
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
@@ -24,7 +37,7 @@ def process_with_gemini(text, api_key, user_prompt=None):
         "Content-Type": "application/json"
     }
 
-    # Default to generating key points with examples if user provides no prompt
+    # Default prompt to generate key points and examples if user doesn't specify one
     if user_prompt:
         prompt = f"{user_prompt}\n\n{text}"
     else:
@@ -50,14 +63,20 @@ def process_with_gemini(text, api_key, user_prompt=None):
     else:
         return f"Request failed with status code {response.status_code}: {response.text}"
 
+# Function to sanitize filename (remove illegal characters)
+def sanitize_filename(name):
+    return re.sub(r'[\\/*?"<>|]', "_", name)
+
 if __name__ == "__main__":
-    # Ask the user to enter the YouTube video link
+    # Ask the user to enter the YouTube video URL
     video_url = input("Enter the YouTube video URL: ").strip()
 
-    # Extract the video ID from the URL
-    if "v=" in video_url:
-        video_id = video_url.split("v=")[-1].split("&")[0]
-    else:
+    # Extract video ID from URL
+    parsed_url = urlparse(video_url)
+    query_params = parse_qs(parsed_url.query)
+    video_id = query_params.get("v", [None])[0]
+
+    if not video_id:
         print("Invalid YouTube video URL.")
         exit(1)
 
@@ -73,7 +92,20 @@ if __name__ == "__main__":
         print("Transcript not available.")
         exit(1)
 
-    # Prompt the user for custom input
+    # Attempt to fetch video title
+    video_title = get_youtube_title(video_url)
+
+    # If fetching title fails, generate one using Gemini based on the transcript
+    if not video_title:
+        print("\nCould not fetch video title. Using Gemini to generate one...")
+        title_prompt = "Generate an appropriate and descriptive title for this YouTube video based on the transcript:\n" + transcript
+        video_title = process_with_gemini(transcript, api_key, user_prompt=title_prompt)
+        video_title = video_title.strip().split("\n")[0]  # Use first line as title
+
+    # Sanitize title for filename usage
+    output_filename = sanitize_filename(video_title) + ".txt"
+
+    # Prompt the user for custom instructions
     print("\nWhat would you like to do with the transcript?")
     user_prompt = input("Enter your prompt or press Enter to auto-generate key points with examples: ").strip()
     user_prompt = user_prompt if user_prompt else None
@@ -81,8 +113,7 @@ if __name__ == "__main__":
     # Process transcript using Gemini
     output = process_with_gemini(transcript, api_key, user_prompt)
 
-    # Save the output to a .txt file
-    output_filename = f"{video_id}_summary.txt"
+    # Save output to a .txt file
     with open(output_filename, "w", encoding="utf-8") as f:
         f.write(output)
 
